@@ -1,0 +1,68 @@
+Great, two things at once — let's tackle both!
+
+---
+
+## 🚀 Where to start with SmartDesk
+
+**Start with the backend skeleton — always.** Frontend without a backend is just decoration. Here's the exact order:
+
+**Day 1–3: Project bootstrap**
+- Create a Spring Boot 3 project at [start.spring.io](https://start.spring.io) with: Web, Security, JPA, WebSocket, PostgreSQL, Lombok, Validation
+- Set up Docker Compose with PostgreSQL + Redis from day one
+- Create your first entity: `Ticket` (id, title, description, status, priority, createdAt)
+- Get one REST endpoint working: `POST /api/tickets` and `GET /api/tickets`
+
+**Day 4–7: Auth**
+- Add JWT authentication (Spring Security + jjwt library)
+- Create `User` entity with roles: ADMIN, AGENT, USER
+- Secure your endpoints with role-based access
+
+**Week 2: Core ticket logic**
+- Full CRUD for tickets, comments, assignments
+- WebSocket configuration for real-time updates
+
+**Week 3: Angular scaffold**
+- Generate the project with Angular CLI, set up NgRx, routing with lazy loading, Angular Material
+- Build the ticket list and detail components connected to your real API
+
+**Week 4+: AI integration**
+- Only add AI *after* the core app works — this is a senior move that interviewers notice
+
+---
+
+## 📚 Prompt Engineering Resources
+
+Three resources, in the order you should read them:
+
+**1. Anthropic's official prompting guide** — the best starting point, free, very practical
+👉 [docs.claude.ai/en/docs/build-with-claude/prompt-engineering/overview](https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering/overview)
+
+**2. "Prompt Engineering Guide" by DAIR.AI** — more technical, covers chain-of-thought, RAG prompting, few-shot examples
+👉 [promptingguide.ai](https://www.promptingguide.ai)
+
+**3. DeepLearning.AI short course: "ChatGPT Prompt Engineering for Developers"** — free, 1 hour, very hands-on with code examples. Taught by Andrew Ng + OpenAI
+👉 [learn.deeplearning.ai](https://learn.deeplearning.ai)
+
+The concepts transfer across all LLMs (Claude, GPT, etc.) — learn them once, apply everywhere.
+
+---
+
+## 🏡 Your Friend's Booking System in Marrakech — Yes, absolutely!
+
+This is actually a **better portfolio project** than SmartDesk in one way: it's a *real product* someone will actually use, which is a killer story in interviews.
+
+Here's what an AI-powered booking system for a small rental looks like:**The AI features that make this genuinely useful for your friend:**
+
+**1. AI travel assistant chatbot** — tourists ask "Is there parking?", "How far from the medina?", "Is it good for families?" and the AI answers from your friend's house info (RAG). No more repetitive WhatsApp messages at midnight.
+
+**2. Smart pricing suggestions** — the AI looks at local events in Marrakech (festivals, high season) and suggests optimal nightly rates to the owner.
+
+**3. Auto review responses** — after a stay, the AI drafts a personalized "thank you" reply to guest reviews, which the owner approves with one click.
+
+**4. Booking summary for the owner** — "This week you have 3 bookings, 2 from France, peak days are Friday–Sunday" — all generated automatically.
+
+---
+
+**My honest recommendation:** build **both projects**. SmartDesk is your technical depth showcase. The Marrakech booking app is your *real-world impact* story — "I built a product that an actual small business owner uses." That combination is very hard to compete against in interviews.
+
+Want me to help you scaffold the Spring Boot project for either one right now — generate the folder structure, entities, and first endpoints?
