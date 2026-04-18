@@ -17,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
@@ -61,6 +62,16 @@ public class TicketController {
         return ticketService.search(status, priority, category, pageable);
     }
 
+    // ── Assigned to me ───────────────────────────────────────────────────────
+    @GetMapping("/mine")
+    @Operation(summary = "List tickets assigned to the current user")
+    public Page<TicketDto.Summary> mine(
+            @AuthenticationPrincipal User currentUser,
+            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+
+        return ticketService.findAssignedToUser(currentUser, pageable);
+    }
+
     // ── Get by id ────────────────────────────────────────────────────────────
     @GetMapping("/{id}")
     public TicketDto.Response getById(@PathVariable UUID id) {
@@ -77,9 +88,28 @@ public class TicketController {
         return ticketService.update(id, request, currentUser);
     }
 
+    // ── Assign / unassign ────────────────────────────────────────────────────
+    @PostMapping("/{id}/assign")
+    @Operation(summary = "Assign a ticket to an agent (AGENT/ADMIN only)")
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    public TicketDto.Response assign(
+            @PathVariable UUID id,
+            @Valid @RequestBody TicketDto.AssignRequest request) {
+
+        return ticketService.assign(id, request.agentId());
+    }
+
+    @DeleteMapping("/{id}/assign")
+    @Operation(summary = "Unassign a ticket (AGENT/ADMIN only)")
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    public TicketDto.Response unassign(@PathVariable UUID id) {
+        return ticketService.unassign(id);
+    }
+
     // ── Delete ───────────────────────────────────────────────────────────────
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(
             @PathVariable UUID id,
             @AuthenticationPrincipal User currentUser) {

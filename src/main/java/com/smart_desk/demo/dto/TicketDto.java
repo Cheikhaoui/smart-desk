@@ -30,6 +30,11 @@ public class TicketDto {
             UUID assignedToId
     ) {}
 
+    /** Assign an agent to a ticket */
+    public record AssignRequest(
+            @jakarta.validation.constraints.NotNull UUID agentId
+    ) {}
+
     /** Full response with relationships */
     public record Response(
             UUID id,

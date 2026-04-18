@@ -39,11 +39,3 @@ CREATE INDEX idx_tickets_status      ON tickets(status);
 CREATE INDEX idx_tickets_assigned_to ON tickets(assigned_to);
 CREATE INDEX idx_tickets_created_by  ON tickets(created_by);
 CREATE INDEX idx_comments_ticket_id  ON comments(ticket_id);
-
--- Default admin — password: Admin1234!
-INSERT INTO users (email, password, full_name, role) VALUES (
-                                                                'admin@smartdesk.dev',
-                                                                '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQyCgGVt.J0Q.3F6S1y5NRKMC',
-                                                                'Admin User',
-                                                                'ADMIN'
-                                                            );

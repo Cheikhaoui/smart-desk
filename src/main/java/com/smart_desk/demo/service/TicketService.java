@@ -69,11 +69,42 @@ public class TicketService {
         if (req.category()    != null) ticket.setCategory(req.category());
 
         if (req.assignedToId() != null) {
-            User agent = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("..."));
+            User agent = userRepository.findById(req.assignedToId())
+                    .orElseThrow(() -> new EntityNotFoundException("User not found: " + req.assignedToId()));
             ticket.setAssignedTo(agent);
         }
 
         return TicketDto.Response.from(ticketRepository.save(ticket));
+    }
+
+    // ── Delete ───────────────────────────────────────────────────────────────
+
+    // ── Assignment ───────────────────────────────────────────────────────────
+
+    @Transactional
+    public TicketDto.Response assign(UUID ticketId, UUID agentId) {
+        Ticket ticket = getOrThrow(ticketId);
+        User agent = userRepository.findById(agentId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + agentId));
+
+        if (agent.getRole() != User.Role.AGENT && agent.getRole() != User.Role.ADMIN) {
+            throw new IllegalArgumentException("Only AGENT or ADMIN users can be assigned tickets");
+        }
+
+        ticket.setAssignedTo(agent);
+        return TicketDto.Response.from(ticketRepository.save(ticket));
+    }
+
+    @Transactional
+    public TicketDto.Response unassign(UUID ticketId) {
+        Ticket ticket = getOrThrow(ticketId);
+        ticket.setAssignedTo(null);
+        return TicketDto.Response.from(ticketRepository.save(ticket));
+    }
+
+    public Page<TicketDto.Summary> findAssignedToUser(User user, Pageable pageable) {
+        return ticketRepository.findByAssignedToId(user.getId(), pageable)
+                .map(TicketDto.Summary::from);
     }
 
     // ── Delete ───────────────────────────────────────────────────────────────
