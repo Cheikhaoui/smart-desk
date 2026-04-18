@@ -4,10 +4,13 @@ package com.smart_desk.demo.service;
 import com.smart_desk.demo.dto.TicketDto;
 import com.smart_desk.demo.entities.Ticket;
 import com.smart_desk.demo.entities.User;
+import com.smart_desk.demo.notification.events.TicketAssignedEvent;
+import com.smart_desk.demo.notification.events.TicketCreatedEvent;
 import com.smart_desk.demo.repositories.TicketRepository;
 import com.smart_desk.demo.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,6 +26,7 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ── Create ───────────────────────────────────────────────────────────────
 
@@ -36,7 +40,9 @@ public class TicketService {
                 .createdBy(currentUser)
                 .build();
 
-        return TicketDto.Response.from(ticketRepository.save(ticket));
+        Ticket saved = ticketRepository.save(ticket);
+        eventPublisher.publishEvent(new TicketCreatedEvent(saved));
+        return TicketDto.Response.from(saved);
     }
 
     // ── Read ─────────────────────────────────────────────────────────────────
@@ -68,16 +74,21 @@ public class TicketService {
         if (req.priority()    != null) ticket.setPriority(req.priority());
         if (req.category()    != null) ticket.setCategory(req.category());
 
+        boolean assignmentChanged = false;
         if (req.assignedToId() != null) {
             User agent = userRepository.findById(req.assignedToId())
                     .orElseThrow(() -> new EntityNotFoundException("User not found: " + req.assignedToId()));
+            assignmentChanged = ticket.getAssignedTo() == null
+                    || !ticket.getAssignedTo().getId().equals(agent.getId());
             ticket.setAssignedTo(agent);
         }
 
-        return TicketDto.Response.from(ticketRepository.save(ticket));
+        Ticket saved = ticketRepository.save(ticket);
+        if (assignmentChanged) {
+            eventPublisher.publishEvent(new TicketAssignedEvent(saved, saved.getAssignedTo()));
+        }
+        return TicketDto.Response.from(saved);
     }
-
-    // ── Delete ───────────────────────────────────────────────────────────────
 
     // ── Assignment ───────────────────────────────────────────────────────────
 
@@ -92,7 +103,9 @@ public class TicketService {
         }
 
         ticket.setAssignedTo(agent);
-        return TicketDto.Response.from(ticketRepository.save(ticket));
+        Ticket saved = ticketRepository.save(ticket);
+        eventPublisher.publishEvent(new TicketAssignedEvent(saved, agent));
+        return TicketDto.Response.from(saved);
     }
 
     @Transactional

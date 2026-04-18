@@ -4,10 +4,12 @@ import com.smart_desk.demo.dto.CommentDto;
 import com.smart_desk.demo.entities.Comment;
 import com.smart_desk.demo.entities.Ticket;
 import com.smart_desk.demo.entities.User;
+import com.smart_desk.demo.notification.events.CommentAddedEvent;
 import com.smart_desk.demo.repositories.CommentRepository;
 import com.smart_desk.demo.repositories.TicketRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ public class CommentService {
 
     private final CommentRepository commentRepository;
     private final TicketRepository ticketRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<CommentDto.Response> listForTicket(UUID ticketId) {
         ensureTicketExists(ticketId);
@@ -42,7 +45,9 @@ public class CommentService {
                 .aiGenerated(false)
                 .build();
 
-        return CommentDto.Response.from(commentRepository.save(comment));
+        Comment saved = commentRepository.save(comment);
+        eventPublisher.publishEvent(new CommentAddedEvent(saved));
+        return CommentDto.Response.from(saved);
     }
 
     @Transactional
