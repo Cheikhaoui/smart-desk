@@ -36,7 +36,7 @@ public class AuthService {
                 .build();
 
         User saved = userRepository.save(user);
-        return new AuthDto.TokenResponse(jwtService.generateToken(saved), UserDto.Response.from(saved));
+        return new AuthDto.TokenResponse(jwtService.generateToken(saved), UserDto.UserResponse.from(saved));
     }
 
     public AuthDto.TokenResponse login(AuthDto.LoginRequest req) {
@@ -44,6 +44,6 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(req.email(), req.password()));
 
         User user = userRepository.findByEmail(req.email()).orElseThrow();
-        return new AuthDto.TokenResponse(jwtService.generateToken(user), UserDto.Response.from(user));
+        return new AuthDto.TokenResponse(jwtService.generateToken(user), UserDto.UserResponse.from(user));
     }
 }

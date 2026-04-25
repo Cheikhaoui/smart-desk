@@ -6,6 +6,10 @@ import com.smart_desk.demo.entities.Ticket;
 import com.smart_desk.demo.entities.User;
 import com.smart_desk.demo.notification.events.TicketAssignedEvent;
 import com.smart_desk.demo.notification.events.TicketCreatedEvent;
+import com.smart_desk.demo.notification.events.TicketDeletedEvent;
+import com.smart_desk.demo.notification.events.TicketStatusChangedEvent;
+import com.smart_desk.demo.notification.events.TicketUnassignedEvent;
+import com.smart_desk.demo.notification.events.TicketUpdatedEvent;
 import com.smart_desk.demo.repositories.TicketRepository;
 import com.smart_desk.demo.repositories.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,7 +35,7 @@ public class TicketService {
     // ── Create ───────────────────────────────────────────────────────────────
 
     @Transactional
-    public TicketDto.Response create(TicketDto.CreateRequest req, User currentUser) {
+    public TicketDto.TicketResponse create(TicketDto.CreateRequest req, User currentUser) {
         Ticket ticket = Ticket.builder()
                 .title(req.title())
                 .description(req.description())
@@ -42,31 +46,33 @@ public class TicketService {
 
         Ticket saved = ticketRepository.save(ticket);
         eventPublisher.publishEvent(new TicketCreatedEvent(saved));
-        return TicketDto.Response.from(saved);
+        return TicketDto.TicketResponse.from(saved);
     }
 
     // ── Read ─────────────────────────────────────────────────────────────────
 
-    public TicketDto.Response findById(UUID id) {
-        return TicketDto.Response.from(getOrThrow(id));
+    public TicketDto.TicketResponse findById(UUID id) {
+        return TicketDto.TicketResponse.from(getOrThrow(id));
     }
 
-    public Page<TicketDto.Summary> search(
+    public Page<TicketDto.TicketSummary> search(
             Ticket.Status status,
             Ticket.Priority priority,
             String category,
             Pageable pageable) {
         return ticketRepository
                 .search(status, priority, category, pageable)
-                .map(TicketDto.Summary::from);
+                .map(TicketDto.TicketSummary::from);
     }
 
     // ── Update ───────────────────────────────────────────────────────────────
 
     @Transactional
-    public TicketDto.Response update(UUID id, TicketDto.UpdateRequest req, User currentUser) {
+    public TicketDto.TicketResponse update(UUID id, TicketDto.UpdateRequest req, User currentUser) {
         Ticket ticket = getOrThrow(id);
         assertCanModify(ticket, currentUser);
+
+        Ticket.Status oldStatus = ticket.getStatus();
 
         if (req.title()       != null) ticket.setTitle(req.title());
         if (req.description() != null) ticket.setDescription(req.description());
@@ -84,16 +90,21 @@ public class TicketService {
         }
 
         Ticket saved = ticketRepository.save(ticket);
+
+        eventPublisher.publishEvent(new TicketUpdatedEvent(saved));
         if (assignmentChanged) {
             eventPublisher.publishEvent(new TicketAssignedEvent(saved, saved.getAssignedTo()));
         }
-        return TicketDto.Response.from(saved);
+        if (req.status() != null && req.status() != oldStatus) {
+            eventPublisher.publishEvent(new TicketStatusChangedEvent(saved, oldStatus, req.status()));
+        }
+        return TicketDto.TicketResponse.from(saved);
     }
 
     // ── Assignment ───────────────────────────────────────────────────────────
 
     @Transactional
-    public TicketDto.Response assign(UUID ticketId, UUID agentId) {
+    public TicketDto.TicketResponse assign(UUID ticketId, UUID agentId) {
         Ticket ticket = getOrThrow(ticketId);
         User agent = userRepository.findById(agentId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + agentId));
@@ -104,20 +115,29 @@ public class TicketService {
 
         ticket.setAssignedTo(agent);
         Ticket saved = ticketRepository.save(ticket);
+
+        eventPublisher.publishEvent(new TicketUpdatedEvent(saved));
         eventPublisher.publishEvent(new TicketAssignedEvent(saved, agent));
-        return TicketDto.Response.from(saved);
+        return TicketDto.TicketResponse.from(saved);
     }
 
     @Transactional
-    public TicketDto.Response unassign(UUID ticketId) {
+    public TicketDto.TicketResponse unassign(UUID ticketId) {
         Ticket ticket = getOrThrow(ticketId);
+        User previous = ticket.getAssignedTo();
         ticket.setAssignedTo(null);
-        return TicketDto.Response.from(ticketRepository.save(ticket));
+        Ticket saved = ticketRepository.save(ticket);
+
+        eventPublisher.publishEvent(new TicketUpdatedEvent(saved));
+        if (previous != null) {
+            eventPublisher.publishEvent(new TicketUnassignedEvent(saved, previous));
+        }
+        return TicketDto.TicketResponse.from(saved);
     }
 
-    public Page<TicketDto.Summary> findAssignedToUser(User user, Pageable pageable) {
+    public Page<TicketDto.TicketSummary> findAssignedToUser(User user, Pageable pageable) {
         return ticketRepository.findByAssignedToId(user.getId(), pageable)
-                .map(TicketDto.Summary::from);
+                .map(TicketDto.TicketSummary::from);
     }
 
     // ── Delete ───────────────────────────────────────────────────────────────
@@ -128,7 +148,9 @@ public class TicketService {
         if (currentUser.getRole() != User.Role.ADMIN) {
             throw new AccessDeniedException("Only admins can delete tickets");
         }
+        UUID ticketId = ticket.getId();
         ticketRepository.delete(ticket);
+        eventPublisher.publishEvent(new TicketDeletedEvent(ticketId));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -149,4 +171,3 @@ public class TicketService {
         }
     }
 }
-

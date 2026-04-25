@@ -36,7 +36,7 @@ public class TicketDto {
     ) {}
 
     /** Full response with relationships */
-    public record Response(
+    public record TicketResponse(
             UUID id,
             String title,
             String description,
@@ -44,13 +44,13 @@ public class TicketDto {
             Ticket.Priority priority,
             String category,
             String aiSummary,
-            UserDto.Summary createdBy,
-            UserDto.Summary assignedTo,
+            UserDto.UserSummary createdBy,
+            UserDto.UserSummary assignedTo,
             Instant createdAt,
             Instant updatedAt
     ) {
-        public static Response from(Ticket t) {
-            return new Response(
+        public static TicketResponse from(Ticket t) {
+            return new TicketResponse(
                     t.getId(),
                     t.getTitle(),
                     t.getDescription(),
@@ -58,8 +58,8 @@ public class TicketDto {
                     t.getPriority(),
                     t.getCategory(),
                     t.getAiSummary(),
-                    UserDto.Summary.from(t.getCreatedBy()),
-                    UserDto.Summary.from(t.getAssignedTo()),
+                    UserDto.UserSummary.from(t.getCreatedBy()),
+                    UserDto.UserSummary.from(t.getAssignedTo()),
                     t.getCreatedAt(),
                     t.getUpdatedAt()
             );
@@ -67,23 +67,23 @@ public class TicketDto {
     }
 
     /** Lightweight summary for list views (no description/comments loaded) */
-    public record Summary(
+    public record TicketSummary(
             UUID id,
             String title,
             Ticket.Status status,
             Ticket.Priority priority,
             String category,
-            UserDto.Summary assignedTo,
+            UserDto.UserSummary assignedTo,
             Instant createdAt
     ) {
-        public static Summary from(Ticket t) {
-            return new Summary(
+        public static TicketSummary from(Ticket t) {
+            return new TicketSummary(
                     t.getId(),
                     t.getTitle(),
                     t.getStatus(),
                     t.getPriority(),
                     t.getCategory(),
-                    UserDto.Summary.from(t.getAssignedTo()),
+                    UserDto.UserSummary.from(t.getAssignedTo()),
                     t.getCreatedAt()
             );
         }

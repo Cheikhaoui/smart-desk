@@ -1,6 +1,7 @@
 package com.smart_desk.demo;
 
 
+import com.smart_desk.demo.common.ErrorResponse;
 import com.smart_desk.demo.dto.TicketDto;
 import com.smart_desk.demo.entities.Ticket;
 import com.smart_desk.demo.entities.User;
@@ -12,21 +13,22 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/v1/tickets")
+@RequestMapping(value = "/v1/tickets", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class TicketController {
 
@@ -37,15 +39,17 @@ public class TicketController {
     @Operation(summary = "Create a new ticket",
             description = "Creates a ticket owned by the currently authenticated user")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Ticket created"),
+            @ApiResponse(responseCode = "201", description = "Ticket created",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = TicketDto.TicketResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid input",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "401", description = "Not authenticated")})
-    public ResponseEntity<TicketDto.Response> create(
+    public ResponseEntity<TicketDto.TicketResponse> create(
             @Valid @RequestBody TicketDto.CreateRequest request,
             @AuthenticationPrincipal User currentUser) {
 
-        TicketDto.Response created = ticketService.create(request, currentUser);
+        TicketDto.TicketResponse created = ticketService.create(request, currentUser);
         return ResponseEntity
                 .created(URI.create("/v1/tickets/" + created.id()))
                 .body(created);
@@ -53,11 +57,12 @@ public class TicketController {
 
     // ── List / search ────────────────────────────────────────────────────────
     @GetMapping
-    public Page<TicketDto.Summary> search(
+    @Operation(summary = "Search tickets", description = "Returns a page of ticket summaries")
+    public Page<TicketDto.TicketSummary> search(
             @RequestParam(required = false) Ticket.Status status,
             @RequestParam(required = false) Ticket.Priority priority,
             @RequestParam(required = false) String category,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
         return ticketService.search(status, priority, category, pageable);
     }
@@ -65,22 +70,30 @@ public class TicketController {
     // ── Assigned to me ───────────────────────────────────────────────────────
     @GetMapping("/mine")
     @Operation(summary = "List tickets assigned to the current user")
-    public Page<TicketDto.Summary> mine(
+    public Page<TicketDto.TicketSummary> mine(
             @AuthenticationPrincipal User currentUser,
-            @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
         return ticketService.findAssignedToUser(currentUser, pageable);
     }
 
     // ── Get by id ────────────────────────────────────────────────────────────
     @GetMapping("/{id}")
-    public TicketDto.Response getById(@PathVariable UUID id) {
+    @Operation(summary = "Fetch a single ticket by id")
+    @ApiResponse(responseCode = "200", description = "Ticket found",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = TicketDto.TicketResponse.class)))
+    public TicketDto.TicketResponse getById(@PathVariable UUID id) {
         return ticketService.findById(id);
     }
 
     // ── Update ───────────────────────────────────────────────────────────────
     @PatchMapping("/{id}")
-    public TicketDto.Response update(
+    @Operation(summary = "Update a ticket")
+    @ApiResponse(responseCode = "200", description = "Ticket updated",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = TicketDto.TicketResponse.class)))
+    public TicketDto.TicketResponse update(
             @PathVariable UUID id,
             @Valid @RequestBody TicketDto.UpdateRequest request,
             @AuthenticationPrincipal User currentUser) {
@@ -91,8 +104,11 @@ public class TicketController {
     // ── Assign / unassign ────────────────────────────────────────────────────
     @PostMapping("/{id}/assign")
     @Operation(summary = "Assign a ticket to an agent (AGENT/ADMIN only)")
+    @ApiResponse(responseCode = "200", description = "Ticket assigned",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = TicketDto.TicketResponse.class)))
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
-    public TicketDto.Response assign(
+    public TicketDto.TicketResponse assign(
             @PathVariable UUID id,
             @Valid @RequestBody TicketDto.AssignRequest request) {
 
@@ -101,8 +117,11 @@ public class TicketController {
 
     @DeleteMapping("/{id}/assign")
     @Operation(summary = "Unassign a ticket (AGENT/ADMIN only)")
+    @ApiResponse(responseCode = "200", description = "Ticket unassigned",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = TicketDto.TicketResponse.class)))
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
-    public TicketDto.Response unassign(@PathVariable UUID id) {
+    public TicketDto.TicketResponse unassign(@PathVariable UUID id) {
         return ticketService.unassign(id);
     }
 
@@ -117,4 +136,3 @@ public class TicketController {
         ticketService.delete(id, currentUser);
     }
 }
-

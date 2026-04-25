@@ -4,9 +4,14 @@ import com.smart_desk.demo.dto.CommentDto;
 import com.smart_desk.demo.entities.User;
 import com.smart_desk.demo.service.CommentService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +21,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/v1")
+@RequestMapping(value = "/v1", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class CommentController {
 
@@ -24,18 +29,24 @@ public class CommentController {
 
     @GetMapping("/tickets/{ticketId}/comments")
     @Operation(summary = "List comments for a ticket")
-    public List<CommentDto.Response> list(@PathVariable UUID ticketId) {
+    @ApiResponse(responseCode = "200", description = "Comments for the ticket",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    array = @ArraySchema(schema = @Schema(implementation = CommentDto.CommentResponse.class))))
+    public List<CommentDto.CommentResponse> list(@PathVariable UUID ticketId) {
         return commentService.listForTicket(ticketId);
     }
 
     @PostMapping("/tickets/{ticketId}/comments")
     @Operation(summary = "Add a comment to a ticket")
-    public ResponseEntity<CommentDto.Response> add(
+    @ApiResponse(responseCode = "201", description = "Comment created",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = CommentDto.CommentResponse.class)))
+    public ResponseEntity<CommentDto.CommentResponse> add(
             @PathVariable UUID ticketId,
-            @Valid @RequestBody CommentDto.CreateRequest request,
+            @Valid @RequestBody CommentDto.CommentCreateRequest request,
             @AuthenticationPrincipal User currentUser) {
 
-        CommentDto.Response created = commentService.add(ticketId, request, currentUser);
+        CommentDto.CommentResponse created = commentService.add(ticketId, request, currentUser);
         return ResponseEntity
                 .created(URI.create("/v1/comments/" + created.id()))
                 .body(created);
@@ -43,9 +54,12 @@ public class CommentController {
 
     @PatchMapping("/comments/{commentId}")
     @Operation(summary = "Update a comment (author or ADMIN only)")
-    public CommentDto.Response update(
+    @ApiResponse(responseCode = "200", description = "Comment updated",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = CommentDto.CommentResponse.class)))
+    public CommentDto.CommentResponse update(
             @PathVariable UUID commentId,
-            @Valid @RequestBody CommentDto.UpdateRequest request,
+            @Valid @RequestBody CommentDto.CommentUpdateRequest request,
             @AuthenticationPrincipal User currentUser) {
 
         return commentService.update(commentId, request, currentUser);

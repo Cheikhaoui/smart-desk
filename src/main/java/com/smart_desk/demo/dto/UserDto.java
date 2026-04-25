@@ -7,15 +7,15 @@ import java.util.UUID;
 public class UserDto {
 
     /** Response — never expose password or internal fields */
-    public record Response(
+    public record UserResponse(
         UUID id,
         String email,
         String fullName,
         User.Role role,
         boolean active
     ) {
-        public static Response from(User user) {
-            return new Response(
+        public static UserResponse from(User user) {
+            return new UserResponse(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
@@ -26,10 +26,10 @@ public class UserDto {
     }
 
     /** Minimal summary for embedding in other responses */
-    public record Summary(UUID id, String fullName, String email) {
-        public static Summary from(User user) {
+    public record UserSummary(UUID id, String fullName, String email) {
+        public static UserSummary from(User user) {
             if (user == null) return null;
-            return new Summary(user.getId(), user.getFullName(), user.getEmail());
+            return new UserSummary(user.getId(), user.getFullName(), user.getEmail());
         }
     }
 }

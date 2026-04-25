@@ -5,6 +5,10 @@ import com.smart_desk.demo.entities.User;
 import com.smart_desk.demo.notification.events.CommentAddedEvent;
 import com.smart_desk.demo.notification.events.TicketAssignedEvent;
 import com.smart_desk.demo.notification.events.TicketCreatedEvent;
+import com.smart_desk.demo.notification.events.TicketDeletedEvent;
+import com.smart_desk.demo.notification.events.TicketStatusChangedEvent;
+import com.smart_desk.demo.notification.events.TicketUnassignedEvent;
+import com.smart_desk.demo.notification.events.TicketUpdatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -22,42 +26,60 @@ public class NotificationListener {
 
     private final SimpMessagingTemplate messaging;
 
+    // ── Broadcast topic events ───────────────────────────────────────────────
+
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onTicketCreated(TicketCreatedEvent event) {
-        Ticket t = event.ticket();
-        messaging.convertAndSend(TOPIC_TICKETS, NotificationDto.Envelope.of(
-                NotificationDto.Kind.TICKET_CREATED,
-                NotificationDto.TicketPayload.from(t)));
+        messaging.convertAndSend(TOPIC_TICKETS, NotificationDto.TicketCreated.of(event.ticket()));
     }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onTicketUpdated(TicketUpdatedEvent event) {
+        messaging.convertAndSend(TOPIC_TICKETS, NotificationDto.TicketUpdated.of(event.ticket()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onTicketDeleted(TicketDeletedEvent event) {
+        messaging.convertAndSend(TOPIC_TICKETS, NotificationDto.TicketDeleted.of(event.ticketId()));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onCommentAdded(CommentAddedEvent event) {
+        String destination = "/topic/tickets/" + event.comment().getTicket().getId() + "/comments";
+        messaging.convertAndSend(destination, NotificationDto.CommentAdded.of(event.comment()));
+    }
+
+    // ── Private per-user notifications ───────────────────────────────────────
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onTicketAssigned(TicketAssignedEvent event) {
         Ticket t = event.ticket();
         User assignee = event.assignee();
-
-        NotificationDto.Envelope envelope = NotificationDto.Envelope.of(
-                NotificationDto.Kind.TICKET_ASSIGNED,
-                NotificationDto.AssignmentPayload.from(t));
-
-        messaging.convertAndSend(TOPIC_TICKETS, envelope);
-
-        if (assignee != null) {
-            messaging.convertAndSendToUser(assignee.getEmail(), QUEUE_NOTIFICATIONS, envelope);
-        }
+        if (assignee == null) return;
+        messaging.convertAndSendToUser(
+                assignee.getId().toString(),
+                QUEUE_NOTIFICATIONS,
+                NotificationDto.UserNotification.assigned(t));
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    public void onCommentAdded(CommentAddedEvent event) {
-        NotificationDto.Envelope envelope = NotificationDto.Envelope.of(
-                NotificationDto.Kind.COMMENT_ADDED,
-                NotificationDto.CommentPayload.from(event.comment()));
+    public void onTicketUnassigned(TicketUnassignedEvent event) {
+        User previous = event.previousAssignee();
+        if (previous == null) return;
+        messaging.convertAndSendToUser(
+                previous.getId().toString(),
+                QUEUE_NOTIFICATIONS,
+                NotificationDto.UserNotification.unassigned(event.ticket()));
+    }
 
-        messaging.convertAndSend(TOPIC_TICKETS, envelope);
-
-        User assignee = event.comment().getTicket().getAssignedTo();
-        User author = event.comment().getAuthor();
-        if (assignee != null && !assignee.getId().equals(author.getId())) {
-            messaging.convertAndSendToUser(assignee.getEmail(), QUEUE_NOTIFICATIONS, envelope);
-        }
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onTicketStatusChanged(TicketStatusChangedEvent event) {
+        Ticket t = event.ticket();
+        User creator = t.getCreatedBy();
+        if (creator == null) return;
+        messaging.convertAndSendToUser(
+                creator.getId().toString(),
+                QUEUE_NOTIFICATIONS,
+                NotificationDto.UserNotification.statusChanged(t, event.oldStatus(), event.newStatus()));
     }
 }

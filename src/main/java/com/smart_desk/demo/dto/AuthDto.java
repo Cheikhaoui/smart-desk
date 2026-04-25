@@ -17,5 +17,5 @@ public class AuthDto {
             @NotBlank String password
     ) {}
 
-    public record TokenResponse(String token, UserDto.Response user) {}
+    public record TokenResponse(String token, UserDto.UserResponse user) {}
 }

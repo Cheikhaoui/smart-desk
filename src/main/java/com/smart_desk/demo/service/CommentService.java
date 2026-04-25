@@ -26,15 +26,15 @@ public class CommentService {
     private final TicketRepository ticketRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    public List<CommentDto.Response> listForTicket(UUID ticketId) {
+    public List<CommentDto.CommentResponse> listForTicket(UUID ticketId) {
         ensureTicketExists(ticketId);
         return commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()
-                .map(CommentDto.Response::from)
+                .map(CommentDto.CommentResponse::from)
                 .toList();
     }
 
     @Transactional
-    public CommentDto.Response add(UUID ticketId, CommentDto.CreateRequest req, User currentUser) {
+    public CommentDto.CommentResponse add(UUID ticketId, CommentDto.CommentCreateRequest req, User currentUser) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new EntityNotFoundException("Ticket not found: " + ticketId));
 
@@ -47,16 +47,16 @@ public class CommentService {
 
         Comment saved = commentRepository.save(comment);
         eventPublisher.publishEvent(new CommentAddedEvent(saved));
-        return CommentDto.Response.from(saved);
+        return CommentDto.CommentResponse.from(saved);
     }
 
     @Transactional
-    public CommentDto.Response update(UUID commentId, CommentDto.UpdateRequest req, User currentUser) {
+    public CommentDto.CommentResponse update(UUID commentId, CommentDto.CommentUpdateRequest req, User currentUser) {
         Comment comment = getOrThrow(commentId);
         assertCanModify(comment, currentUser);
 
         comment.setContent(req.content());
-        return CommentDto.Response.from(commentRepository.save(comment));
+        return CommentDto.CommentResponse.from(commentRepository.save(comment));
     }
 
     @Transactional

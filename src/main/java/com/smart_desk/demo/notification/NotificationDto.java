@@ -1,7 +1,7 @@
 package com.smart_desk.demo.notification;
 
+import com.smart_desk.demo.dto.CommentDto;
 import com.smart_desk.demo.dto.TicketDto;
-import com.smart_desk.demo.dto.UserDto;
 import com.smart_desk.demo.entities.Comment;
 import com.smart_desk.demo.entities.Ticket;
 
@@ -10,47 +10,60 @@ import java.util.UUID;
 
 public class NotificationDto {
 
-    public enum Kind { TICKET_CREATED, TICKET_ASSIGNED, COMMENT_ADDED }
-
-    public record Envelope(
-            Kind kind,
-            Instant at,
-            Object payload
-    ) {
-        public static Envelope of(Kind kind, Object payload) {
-            return new Envelope(kind, Instant.now(), payload);
+    /** /topic/tickets — broadcast events */
+    public record TicketCreated(String type, TicketDto.TicketSummary ticket, Instant timestamp) {
+        public static TicketCreated of(Ticket t) {
+            return new TicketCreated("TICKET_CREATED", TicketDto.TicketSummary.from(t), Instant.now());
         }
     }
 
-    public record TicketPayload(TicketDto.Summary ticket) {
-        public static TicketPayload from(Ticket t) {
-            return new TicketPayload(TicketDto.Summary.from(t));
+    public record TicketUpdated(String type, TicketDto.TicketSummary ticket, Instant timestamp) {
+        public static TicketUpdated of(Ticket t) {
+            return new TicketUpdated("TICKET_UPDATED", TicketDto.TicketSummary.from(t), Instant.now());
         }
     }
 
-    public record AssignmentPayload(TicketDto.Summary ticket, UserDto.Summary assignee) {
-        public static AssignmentPayload from(Ticket t) {
-            return new AssignmentPayload(
-                    TicketDto.Summary.from(t),
-                    UserDto.Summary.from(t.getAssignedTo()));
+    public record TicketDeleted(String type, UUID ticketId, Instant timestamp) {
+        public static TicketDeleted of(UUID ticketId) {
+            return new TicketDeleted("TICKET_DELETED", ticketId, Instant.now());
         }
     }
 
-    public record CommentPayload(
-            UUID commentId,
+    /** /topic/tickets/{id}/comments */
+    public record CommentAdded(String type, CommentDto.CommentResponse comment, Instant timestamp) {
+        public static CommentAdded of(Comment c) {
+            return new CommentAdded("COMMENT_ADDED", CommentDto.CommentResponse.from(c), Instant.now());
+        }
+    }
+
+    /**
+     * /user/queue/notifications — private per-user toasts.
+     * oldStatus / newStatus are populated only for STATUS_CHANGED.
+     */
+    public record UserNotification(
+            String type,
             UUID ticketId,
-            UserDto.Summary author,
-            String contentPreview
+            String ticketTitle,
+            String oldStatus,
+            String newStatus,
+            String message,
+            Instant timestamp
     ) {
-        public static CommentPayload from(Comment c) {
-            String preview = c.getContent().length() > 140
-                    ? c.getContent().substring(0, 140) + "…"
-                    : c.getContent();
-            return new CommentPayload(
-                    c.getId(),
-                    c.getTicket().getId(),
-                    UserDto.Summary.from(c.getAuthor()),
-                    preview);
+        public static UserNotification assigned(Ticket t) {
+            return new UserNotification("ASSIGNED", t.getId(), t.getTitle(), null, null,
+                    "You were assigned to: " + t.getTitle(), Instant.now());
+        }
+
+        public static UserNotification unassigned(Ticket t) {
+            return new UserNotification("UNASSIGNED", t.getId(), t.getTitle(), null, null,
+                    "You were unassigned from: " + t.getTitle(), Instant.now());
+        }
+
+        public static UserNotification statusChanged(Ticket t, Ticket.Status oldStatus, Ticket.Status newStatus) {
+            return new UserNotification("STATUS_CHANGED", t.getId(), t.getTitle(),
+                    oldStatus.name(), newStatus.name(),
+                    "Status changed from " + oldStatus + " to " + newStatus + " on: " + t.getTitle(),
+                    Instant.now());
         }
     }
 }

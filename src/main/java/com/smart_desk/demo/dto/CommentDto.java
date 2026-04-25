@@ -9,27 +9,27 @@ import java.util.UUID;
 
 public class CommentDto {
 
-    public record CreateRequest(
+    public record CommentCreateRequest(
             @NotBlank @Size(max = 5000) String content
     ) {}
 
-    public record UpdateRequest(
+    public record CommentUpdateRequest(
             @NotBlank @Size(max = 5000) String content
     ) {}
 
-    public record Response(
+    public record CommentResponse(
             UUID id,
             UUID ticketId,
-            UserDto.Summary author,
+            UserDto.UserSummary author,
             String content,
             boolean aiGenerated,
             Instant createdAt
     ) {
-        public static Response from(Comment c) {
-            return new Response(
+        public static CommentResponse from(Comment c) {
+            return new CommentResponse(
                     c.getId(),
                     c.getTicket().getId(),
-                    UserDto.Summary.from(c.getAuthor()),
+                    UserDto.UserSummary.from(c.getAuthor()),
                     c.getContent(),
                     c.isAiGenerated(),
                     c.getCreatedAt()
