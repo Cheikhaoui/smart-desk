@@ -42,6 +42,11 @@ app:
     expiration-ms: 86400000        # 24 hours
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
+  ai:
+    confidence-threshold: 0.6
+    claude:
+      api-key: ${ANTHROPIC_API_KEY:REMOVED}
+      model: claude-haiku-4-5-20251001
 
 logging:
   level:
