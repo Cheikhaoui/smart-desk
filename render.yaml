@@ -9,7 +9,6 @@ services:
     name: smartdesk-api
     env: docker
     plan: free
-    port: 8080
     dockerfilePath: ./Dockerfile
     healthCheckPath: /api/v3/api-docs
     envVars:
