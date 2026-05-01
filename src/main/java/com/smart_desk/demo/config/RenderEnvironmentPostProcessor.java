@@ -32,9 +32,12 @@ public class RenderEnvironmentPostProcessor implements EnvironmentPostProcessor 
 
         String redisUrl = environment.getProperty("REDIS_URL");
         if (redisUrl != null && !redisUrl.isBlank()) {
-            URI uri = URI.create(redisUrl);
+            // Upstash uses rediss:// (TLS); normalize to redis:// for URI parsing
+            boolean tls = redisUrl.startsWith("rediss://");
+            URI uri = URI.create(tls ? redisUrl.replaceFirst("rediss://", "redis://") : redisUrl);
             props.put("spring.data.redis.host", uri.getHost());
             props.put("spring.data.redis.port", uri.getPort() == -1 ? 6379 : uri.getPort());
+            props.put("spring.data.redis.ssl.enabled", tls);
             if (uri.getUserInfo() != null) {
                 String[] userInfo = uri.getUserInfo().split(":", 2);
                 if (userInfo.length > 1 && !userInfo[1].isBlank()) {
