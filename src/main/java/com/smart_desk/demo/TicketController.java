@@ -1,6 +1,7 @@
 package com.smart_desk.demo;
 
 
+import com.smart_desk.demo.ai.AiService;
 import com.smart_desk.demo.common.ErrorResponse;
 import com.smart_desk.demo.dto.TicketDto;
 import com.smart_desk.demo.entities.Ticket;
@@ -33,6 +34,7 @@ import java.util.UUID;
 public class TicketController {
 
     private final TicketService ticketService;
+    private final AiService aiService;
 
     // ── Create ───────────────────────────────────────────────────────────────
     @PostMapping
@@ -123,6 +125,19 @@ public class TicketController {
     @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
     public TicketDto.TicketResponse unassign(@PathVariable UUID id) {
         return ticketService.unassign(id);
+    }
+
+    // ── AI summary ───────────────────────────────────────────────────────────
+    @PostMapping("/{id}/ai/summary")
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    @Operation(summary = "Generate and persist an AI summary of the ticket thread (AGENT/ADMIN only)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Ticket with AI summary populated",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = TicketDto.TicketResponse.class))),
+            @ApiResponse(responseCode = "503", description = "AI provider not configured")})
+    public TicketDto.TicketResponse summarize(@PathVariable UUID id) {
+        return aiService.summarizeThread(id);
     }
 
     // ── Delete ───────────────────────────────────────────────────────────────

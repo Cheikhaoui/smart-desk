@@ -1,5 +1,7 @@
 package com.smart_desk.demo;
 
+import com.smart_desk.demo.ai.AiService;
+import com.smart_desk.demo.ai.SuggestedReply;
 import com.smart_desk.demo.dto.CommentDto;
 import com.smart_desk.demo.entities.User;
 import com.smart_desk.demo.service.CommentService;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +29,7 @@ import java.util.UUID;
 public class CommentController {
 
     private final CommentService commentService;
+    private final AiService aiService;
 
     @GetMapping("/tickets/{ticketId}/comments")
     @Operation(summary = "List comments for a ticket")
@@ -50,6 +54,17 @@ public class CommentController {
         return ResponseEntity
                 .created(URI.create("/v1/comments/" + created.id()))
                 .body(created);
+    }
+
+    @GetMapping("/tickets/{ticketId}/comments/suggest")
+    @PreAuthorize("hasAnyRole('AGENT', 'ADMIN')")
+    @Operation(summary = "Get an AI-suggested reply for a ticket thread (AGENT/ADMIN only)")
+    @ApiResponse(responseCode = "200", description = "AI-generated reply suggestion",
+            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = @Schema(implementation = SuggestedReply.class)))
+    @ApiResponse(responseCode = "503", description = "AI provider not configured")
+    public SuggestedReply suggestReply(@PathVariable UUID ticketId) {
+        return aiService.suggestReply(ticketId);
     }
 
     @PatchMapping("/comments/{commentId}")
