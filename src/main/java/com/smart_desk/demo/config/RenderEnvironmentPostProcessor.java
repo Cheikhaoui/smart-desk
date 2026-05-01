@@ -23,7 +23,9 @@ public class RenderEnvironmentPostProcessor implements EnvironmentPostProcessor 
         String databaseUrl = environment.getProperty("DATABASE_URL");
         if (databaseUrl != null && !databaseUrl.isBlank()) {
             URI uri = URI.create(databaseUrl);
-            String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ":" + uri.getPort() + uri.getPath();
+            int port = uri.getPort();
+            String hostPort = port == -1 ? uri.getHost() : uri.getHost() + ":" + port;
+            String jdbcUrl = "jdbc:postgresql://" + hostPort + uri.getPath();
             String[] userInfo = uri.getUserInfo().split(":", 2);
             props.put("spring.datasource.url", jdbcUrl);
             props.put("spring.datasource.username", userInfo[0]);
