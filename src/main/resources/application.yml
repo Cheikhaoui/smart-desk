@@ -45,7 +45,7 @@ app:
   ai:
     confidence-threshold: 0.6
     claude:
-      api-key: ${ANTHROPIC_API_KEY:REMOVED}
+      api-key: ${ANTHROPIC_API_KEY:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX}
       model: claude-haiku-4-5-20251001
 
 logging:
