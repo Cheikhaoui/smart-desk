@@ -1,0 +1,35 @@
+databases:
+  - name: smartdesk-db
+    databaseName: smartdesk
+    user: smartdesk
+    plan: free
+
+services:
+  - type: redis
+    name: smartdesk-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+
+  - type: web
+    name: smartdesk-api
+    env: docker
+    plan: free
+    port: 8080
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v3/api-docs
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smartdesk-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: smartdesk-redis
+          type: redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false        # set manually in Render dashboard — leave blank to disable AI
+      - key: CORS_ALLOWED_ORIGINS
+        value: http://localhost:4200  # update to your frontend URL after deploying frontend
